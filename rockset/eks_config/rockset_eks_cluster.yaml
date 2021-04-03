@@ -1,0 +1,14 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: meyerkev-rockset-interview
+  region: us-east-2
+
+nodeGroups:
+  - name: rockset
+    instanceType: t3.small
+    desiredCapacity: 3
+    volumeSize: 5
+    ssh:
+      publicKeyPath: ~/.ssh/ec2_id_rsa.pub
