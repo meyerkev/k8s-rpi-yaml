@@ -36,6 +36,11 @@
       - net-tools
       - unattended-upgrades
       - docker.io
+      - software-properties-common
+      - python3
+      - python3-apt
+      - python3-distutils
+      - python-is-python3
       state: latest
     become: yes
   - name: Kubernetes iptables conf
@@ -54,6 +59,36 @@
       group: root
       mode: 0644
     become: yes
+  - name: Get /boot/firmware/cmdline.txt
+    ansible.builtin.slurp:
+      src:  /boot/firmware/cmdline.txt
+    register: boot_cmdline
+    become: yes
+  - name: print content of files
+    debug:
+      var: boot_cmdline.content|b64decode
+  - name: Fix Docker cgroups
+    ansible.builtin.command: 
+      cmd: "sed -i '$ s/$/ {{item}}/' /boot/firmware/cmdline.txt"
+      warn: false
+    become: yes
+    when: item not in boot_cmdline.content|b64decode
+    loop:
+      - 'group_enable=cpuset'
+      - 'cgroup_enable=memory'
+      - 'cgroup_memory=1'
+      - 'swapaccount=1'
+  - name: Test for pip in PATH
+    ansible.builtin.shell: 
+      cmd: "export PATH=${PATH}:${HOME}/.local/bi' ~/.bashrc"
+    register: test_pip_path
+    failed_when: "test_pip_path.rc > 1"
+    changed_when: false
+  - name: add pip bin to bashrc
+    ansible.builtin.lineinfile:
+      dest: ~/.bashrc
+      line: "export PATH=${PATH}:${HOME}/.local/bi"
+    when: test_pip_path.rc != "0"
   - name: Reboot host and wait for it to restart
     reboot:
       msg: "Reboot initiated by Ansible"
