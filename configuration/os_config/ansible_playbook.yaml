@@ -78,17 +78,35 @@
       - 'cgroup_enable=memory'
       - 'cgroup_memory=1'
       - 'swapaccount=1'
+  - name: Enable HDMI hotplug
+    ansible.builtin.command: 
+      cmd: "sed -i '$ s/^#hdmi_force_hotplug=1/hdmi_force_hotplug=1/' /boot/firmware/config.txt"
+      warn: false
+    become: yes
+  - name: Test for hdmi_force_hotplug=1
+    ansible.builtin.shell: 
+      cmd: "grep '^hdmi_force_hotplug=1' /boot/firmware/config.txt"
+    register: test_hdmi_hotplug
+    failed_when: "test_hdmi_hotplug.rc > 1"
+    changed_when: false
+    become: yes
+  - name: add hdmi_force_hotplug=1 to bash
+    ansible.builtin.lineinfile:
+      dest: ~/.bashrc
+      line: "hdmi_force_hotplug=1"
+    when: test_hdmi_hotplug.rc != "0"
   - name: Test for pip in PATH
     ansible.builtin.shell: 
-      cmd: "export PATH=${PATH}:${HOME}/.local/bi' ~/.bashrc"
+      cmd: "grep 'export PATH=${PATH}:${HOME}/.local/bin' ~/.bashrc"
     register: test_pip_path
     failed_when: "test_pip_path.rc > 1"
     changed_when: false
   - name: add pip bin to bashrc
     ansible.builtin.lineinfile:
       dest: ~/.bashrc
-      line: "export PATH=${PATH}:${HOME}/.local/bi"
+      line: "export PATH=${PATH}:${HOME}/.local/bin"
     when: test_pip_path.rc != "0"
+
   - name: Reboot host and wait for it to restart
     reboot:
       msg: "Reboot initiated by Ansible"
