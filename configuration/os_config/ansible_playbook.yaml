@@ -1,0 +1,66 @@
+- hosts: all
+  tasks:
+  - name: Kubernetes key
+    ansible.builtin.apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+    become: yes
+  - name: Kubernetes repository
+    ansible.builtin.apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+    become: yes
+  - name: Update all packages to their latest version
+    ansible.builtin.apt:
+      name: "*"
+      state: latest
+      update_cache: yes
+    become: yes
+  - name: full-upgrade
+    apt:
+      upgrade: full
+      autoclean: yes
+      autoremove: yes
+    become: yes
+  - name: Install fixed Kubernetes packages
+    apt:
+      name: 
+      - kubeadm=1.20.5-00
+      - kubectl=1.20.5-00
+      - kubelet=1.20.5-00
+      state: fixed
+    become: yes
+  - name: Install dependency packages
+    apt:
+      name: 
+      - net-tools
+      - unattended-upgrades
+      - docker.io
+      state: latest
+    become: yes
+  - name: Kubernetes iptables conf
+    ansible.builtin.copy:
+      src: sysctl_k8s.conf
+      dest: /etc/sysctl.d/k8s.conf
+      owner: root
+      group: root
+      mode: 0644
+    become: yes
+  - name: Docker Daemon conf
+    ansible.builtin.copy:
+      src: docker_daemon.json
+      dest: /etc/docker/daemon.json
+      owner: root
+      group: root
+      mode: 0644
+    become: yes
+  - name: Reboot host and wait for it to restart
+    reboot:
+      msg: "Reboot initiated by Ansible"
+      connect_timeout: 5
+      reboot_timeout: 600
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: whoami
+    become: yes
+
